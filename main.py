@@ -1,18 +1,19 @@
 """
 private - login, password and other
 """
-import vk_api
-import re
-import io
+
 from facenet_pytorch import MTCNN, InceptionResnetV1
 import torch
-from PIL import Image, ImageDraw
-import requests
 from tqdm import tqdm
-import psycopg2
-import sqlite3
 
 
+# from PIL import Image, ImageDraw
+# import requests
+# import vk_api
+# import re
+# import io
+# import psycopg2
+# import sqlite3
 # import time
 # from scipy.linalg import norm
 # import numpy as np
@@ -37,10 +38,10 @@ DB_type = "Postegre"
 
 data_base = DataBase(DB_type, device, resnet)
 
-
+"""
 data_base.reset_db()
 data_base.create_db()
-
+"""
 
 if __name__ == '__main__':
     vk = Auth(login=Login, password=Password, auth_handler=True).ImplicitFlow()
@@ -48,7 +49,7 @@ if __name__ == '__main__':
     aligned, ids, link, sex = [], [], [], []
 
     parser = ParsePageVK(5, 4, 50, mtcnn)
-    for i in (range(1, 10000)):
+    for i in tqdm(range(5, 10000)):
         counter += parser.get_albums(vk, i, 1000, aligned, ids, link, sex)
         print("id -", i, "persons -", counter)
         if counter >= parser.max_faces_before_save:
