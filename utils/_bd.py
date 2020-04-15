@@ -154,6 +154,3 @@ if __name__ == "__main__":
     embeddings = resnet(x_aligned[:1]).detach().cpu().numpy()
     print(embeddings.shape)
     DataBase.find_person(embeddings[0])
-
-
-

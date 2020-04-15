@@ -6,7 +6,6 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 import torch
 from tqdm import tqdm
 
-
 # from PIL import Image, ImageDraw
 # import requests
 # import vk_api
@@ -18,7 +17,6 @@ from tqdm import tqdm
 # from scipy.linalg import norm
 # import numpy as np
 # from bs4 import BeautifulSoup
-
 
 from utils.auth import Auth
 from utils.parser import ParsePageVK
@@ -43,6 +41,7 @@ data_base.reset_db()
 data_base.create_db()
 """
 
+
 if __name__ == '__main__':
     vk = Auth(login=Login, password=Password, auth_handler=True).ImplicitFlow()
     counter = 0
@@ -58,8 +57,3 @@ if __name__ == '__main__':
             aligned, ids, link, sex = [], [], [], []
 
     data_base.save_db(aligned, ids, link, sex)
-
-
-
-
-
