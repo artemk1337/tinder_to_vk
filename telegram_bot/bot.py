@@ -6,6 +6,7 @@ import logging
 import json
 import os
 
+
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -22,6 +23,7 @@ markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
 markup_start = ReplyKeyboardMarkup(start_keyboard, one_time_keyboard=True)
 
 
+password = ''
 admins_id = [436264579,
 			 ]
 TOKEN = ''
@@ -69,7 +71,6 @@ def finish_login(update, context):
 	return ConversationHandler.END
 
 
-
 def error(update, context):
 	"""Log Errors caused by Updates."""
 	logger.warning('Update "%s" caused error "%s"', update, context.error)
@@ -99,7 +100,7 @@ def download_photo(update, context):
 def help(update, context):
 	if update.message.from_user.id in admins_id:
 		update.message.reply_text("All avaliable comands:\
-		\n/start\n/help\n/show_history\n/add_id\n/start_parser")
+		\n/start\n/help\n/show_history\n/add_id\n/start_parser\n/login")
 	else:
 		update.message.reply_text("All avaliable comands:\
 		\n/start\n/help")
@@ -108,6 +109,7 @@ def help(update, context):
 def login_start(update, context):
 	update.message.reply_text("Write password")
 	return WAIT
+
 
 def login_finish(update, context):
 	if update.message.text == password:
@@ -118,6 +120,22 @@ def login_finish(update, context):
 	else:
 		update.message.reply_text("Wrong password")
 		return ConversationHandler.END
+
+
+def show_history(update, context):
+	if update.message.from_user.id in admins_id:
+		with open('history.json', 'r') as file:
+			data = json.load(file)
+		update.message.reply_text(data)
+	else:
+		help(update, context)
+
+
+def add_id(update, context):
+	if update.message.from_user.id in admins_id:
+		pass
+	else:
+		help(update, context)
 
 
 def main():
@@ -150,6 +168,8 @@ def main():
     dp.add_handler(conv_handler)
     dp.add_handler(conv_handler_login)
     dp.add_handler(CommandHandler('help', help))
+    dp.add_handler(CommandHandler('show_history', show_history))
+	dp.add_handler(CommandHandler('add_id', add_id))
     #dp.add_handler(MessageHandler(Filters.command, help))
     dp.add_handler(MessageHandler(Filters.all, help))
     

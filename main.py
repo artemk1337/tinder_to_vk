@@ -57,3 +57,25 @@ if __name__ == '__main__':
             aligned, ids, link, sex = [], [], [], []
 
     data_base.save_db(aligned, ids, link, sex)
+
+
+def start_parse(id_=None, range=None):
+	vk = Auth(login=Login, password=Password, auth_handler=True).ImplicitFlow()
+	counter = 0
+    aligned, ids, link, sex = [], [], [], []
+
+    parser = ParsePageVK(5, 4, 50, mtcnn)
+    for i in id_:
+        counter += parser.get_albums(vk, i, 1000, aligned, ids, link, sex)
+        print("id -", i, "persons -", counter)
+        if counter >= parser.max_faces_before_save:
+            data_base.save_db(aligned, ids, link, sex)
+            counter = 0
+            aligned, ids, link, sex = [], [], [], []
+    data_base.save_db(aligned, ids, link, sex)
+
+
+
+
+
+
