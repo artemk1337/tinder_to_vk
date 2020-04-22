@@ -1,190 +1,165 @@
-from telegram import ReplyKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
-                          ConversationHandler, PicklePersistence)
+                          ConversationHandler, PicklePersistence, run_async)
+import telegram
 import time
 import logging
 import json
 import os
+from main import start_parse, reset_db_, find_person
+from functions import (start,
+    info, help, help_admins,
+    error, repeat_input,
+    download_photo,
+    login_start, login_finish,
+    show_history,
+    return_menu, exit_in_menu,
+    start_feedback, send_feedback, try_answer_to_feedback,
+    reset_db,
+    STATUS_FINDER,
+    PHOTO, WAIT,
+    markup, logger)
+
+from private import REQUEST_KWARGS, password_bot, admins_id, TOKEN_bot
+
+STATUS_PARSER = 'OFF'
 
 
-# Enable logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-
-logger = logging.getLogger(__name__)
-
-CHOOSING, TYPING_REPLY, PHOTO, FINISH, WAIT = range(5)
-
-reply_keyboard = [['Info', 'Load photo'],
-                  ['Exit']]
-start_keyboard = [['/start']]
-
-markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
-markup_start = ReplyKeyboardMarkup(start_keyboard, one_time_keyboard=True)
+def add_ids(update, context):
+    if update.message.from_user.id in admins_id:
+        update.message.reply_text("<b><u>Print ids. Example:</u></b>\n"
+                                  "<code>[1, 2]</code>\n<b><u>or:</u></b>\n"
+                                  "<code>[i for i in range(10, 20)]</code>\n\n"
+                                  "<b>/exit - return to main menu</b>",
+                                  parse_mode='HTML')
+        return WAIT
+    else:
+        repeat_input(update, context)
+        return ConversationHandler.END
 
 
-password = ''
-admins_id = [436264579,
-			 ]
-TOKEN = ''
+# 450 :
+@run_async
+def put_ids(update, context):
+    global STATUS_PARSER
+    message = update.message.text
+    if STATUS_PARSER == "ON":
+        d = update.message.reply_text("Parser is busy.\nWait...")
+        while STATUS_PARSER == "ON":
+            context.bot.send_chat_action(chat_id=update.message.chat.id,
+                                         action=telegram.ChatAction.TYPING,
+                                         timeout=5)
+            time.sleep(5)
+    STATUS_PARSER = "ON"
+    update.message.reply_text("*Parsing started*",
+                              parse_mode=telegram.ParseMode.MARKDOWN
+                              )
+    start_parse(id_=eval(message))
+    STATUS_PARSER = "OFF"
+    update.message.reply_text("*Parsing finished*",
+                              parse_mode=telegram.ParseMode.MARKDOWN
+                              )
+    return ConversationHandler.END
 
 
-def create_file():
-	if os.path.isfile('history.json') is False:
-		d = {}
-		with open('history.json', 'w') as file:
-			json.dump(d, file, indent=4, separators=(',', ': '))
+def show_status(update, context):
+    global STATUS_PARSER
+    if update.message.from_user.id in admins_id:
+        update.message.reply_text(f'Parser is <b>{STATUS_PARSER}</b>',
+                                  parse_mode='HTML')
 
 
-def start(update, context):
-	reply_text = "Hi! I can find person in VK."
-	print(update.message.from_user.id)
-	update.message.reply_text(reply_text, reply_markup=markup)
-	create_file()
-	with open('history.json', 'r') as file:
-		data = json.load(file)
-	with open('history.json', 'w') as file:
-		data[update.message.from_user.id] = {'time': time.time()}
-		json.dump(data, file, indent=4, separators=(',', ': '))
-	return CHOOSING
 
-
-def info(update, context):
-	reply_text = "version 1.0"
-	update.message.reply_text(reply_text, reply_markup=markup)
-	return CHOOSING
-
-
-def finish(update, context):
-	if 'choice' in context.user_data:
-		del context.user_data['choice']
-	reply_text = "Goodbye!"
-	update.message.reply_text(reply_text, markup=markup_start)
-	return ConversationHandler.END
-
-
-def finish_login(update, context):
-	if 'choice' in context.user_data:
-		del context.user_data['choice']
-	reply_text = "Ok!"
-	update.message.reply_text(reply_text, markup=markup_start)
-	return ConversationHandler.END
-
-
-def error(update, context):
-	"""Log Errors caused by Updates."""
-	logger.warning('Update "%s" caused error "%s"', update, context.error)
-
-
-def repeat_input(update, context):
-	update.message.reply_text("I don't understand you.\nPlease, press /help")
-
-
-def get_photo(update, context):
-	update.message.reply_text("Load your photo:")
-	return PHOTO
-
-
-def download_photo(update, context):
-	print("LOADING PHOTO")
-	save_path = './'
-	update.message.photo[0].get_file().download(save_path + './image.jpg')
-	update.message.reply_text("Please, wait...")
-	time.sleep(2) # Тут будет сам скрипт
-	update.message.reply_text("Success!", reply_markup=markup)
-	# update.message.reply_text("Вывод результатов", reply_markup=markup)
-	print("LOADING PHOTO SUCCESS")
-	return CHOOSING
-
-
-def help(update, context):
-	if update.message.from_user.id in admins_id:
-		update.message.reply_text("All avaliable comands:\
-		\n/start\n/help\n/show_history\n/add_id\n/start_parser\n/login")
-	else:
-		update.message.reply_text("All avaliable comands:\
-		\n/start\n/help")
-
-
-def login_start(update, context):
-	update.message.reply_text("Write password")
-	return WAIT
-
-
-def login_finish(update, context):
-	if update.message.text == password:
-		update.message.reply_text("Success")
-		if update.message.from_user.id not in admins_id:
-			admins_id.append(update.message.from_user.id)
-		return ConversationHandler.END
-	else:
-		update.message.reply_text("Wrong password")
-		return ConversationHandler.END
-
-
-def show_history(update, context):
-	if update.message.from_user.id in admins_id:
-		with open('history.json', 'r') as file:
-			data = json.load(file)
-		update.message.reply_text(data)
-	else:
-		help(update, context)
-
-
-def add_id(update, context):
-	if update.message.from_user.id in admins_id:
-		pass
-	else:
-		help(update, context)
-
-
-def main():
-    pp = PicklePersistence(filename='conversationbot')
-    updater = Updater(TOKEN, persistence=pp, use_context=True)
+def main(proxy):
+    # pp = PicklePersistence(filename='conversationbot')
+    pp = False
+    updater = Updater(TOKEN_bot,
+                      persistence=pp,
+                      use_context=True,
+                      request_kwargs=REQUEST_KWARGS)
     dp = updater.dispatcher
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            CHOOSING: [MessageHandler(Filters.regex('^(Info)$'),
-                                      info),
-					   MessageHandler(Filters.regex('^Load photo$'),
-                                      get_photo),
-                       ],
-			PHOTO: [MessageHandler(Filters.photo,
-                                   download_photo),
-                   ],
-        },
-        fallbacks=[MessageHandler(Filters.regex('^Exit$'), finish),
-				   MessageHandler(Filters.all, repeat_input)
-				  ],
-		allow_reentry=True,
-        name="my_conversation",
-        persistent=True
-    )
     conv_handler_login = ConversationHandler(
         entry_points=[CommandHandler('login', login_start)],
-        states={WAIT: [MessageHandler(Filters.all, login_finish)]},
-        fallbacks=[],)
-    dp.add_handler(conv_handler)
-    dp.add_handler(conv_handler_login)
-    dp.add_handler(CommandHandler('help', help))
-    dp.add_handler(CommandHandler('show_history', show_history))
-	dp.add_handler(CommandHandler('add_id', add_id))
-    #dp.add_handler(MessageHandler(Filters.command, help))
-    dp.add_handler(MessageHandler(Filters.all, help))
-    
+        states={WAIT: [CommandHandler('exit', return_menu),
+                       MessageHandler(Filters.all, login_finish)]},
+        fallbacks=[CommandHandler('exit', return_menu)],
+        allow_reentry=True, persistent=False,
+        name="login_conversation")
+    conv_handler_add_ids = ConversationHandler(
+        entry_points=[CommandHandler('add_ids', add_ids)],
+        states={WAIT: [CommandHandler('exit', return_menu),
+                       MessageHandler(Filters.text, put_ids)]},
+        fallbacks=[CommandHandler('exit', return_menu)],
+        allow_reentry=False, persistent=False,
+        name="add_ids_conversation")
+    conv_handler_feedback = ConversationHandler(
+        entry_points=[MessageHandler(Filters.regex('^Feedback$'), start_feedback)],
+        states={WAIT: [CommandHandler('exit', return_menu),
+                       MessageHandler(Filters.text, send_feedback)]},
+        fallbacks=[CommandHandler('exit', return_menu)],
+        allow_reentry=False, persistent=False,
+        name="add_ids_conversation")
+    dp.add_handler(conv_handler_login)  # /login
+    dp.add_handler(conv_handler_add_ids)  # /add_ids
+    dp.add_handler(conv_handler_feedback)  # Feedback
+    dp.add_handler(CommandHandler('start', start))  # /start
+    dp.add_handler(CommandHandler('exit', exit_in_menu))  # /exit in main menu
+    dp.add_handler(CommandHandler('reset_db', reset_db))  # /reset_db
+    dp.add_handler(CommandHandler('show_status', show_status))  # /show_status
+    dp.add_handler(CommandHandler('show_history', show_history))  # /show_history
+    dp.add_handler(CommandHandler('help', help))  # /help
+    dp.add_handler(MessageHandler(Filters.regex('^(Info)$'), info))  # Info
+    dp.add_handler(MessageHandler(Filters.regex('^(Help)$'), help))  # Info
+    dp.add_handler(MessageHandler(Filters.photo, download_photo))
+    dp.add_handler(MessageHandler(Filters.text, try_answer_to_feedback))
+    dp.add_handler(MessageHandler(Filters.all, repeat_input))
 
     # log all errors
     dp.add_error_handler(error)
 
     # Start the Bot
-    updater.start_polling()
+    updater.start_polling(poll_interval=1,
+                          timeout=5,)
+    print("Start bot")
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
-    updater.idle()
+    # updater.idle()
 
+"""
+from threading import Thread
+import requests
+
+
+proxy = None
+
+
+def check_proxy(proxy):
+    while True:
+        try:
+            proxies = {
+            "socks5": "socks5://47.244.76.246:1080",
+            }
+            print('test')
+            r = requests.get("http://www.google.com/", proxies=proxies)
+            # r = requests.get("http://api.telegram.org/", proxies=proxies)
+            # r = requests.get("https://core.telegram.org/", proxies=proxies)
+            print(r)
+            time.sleep(2)
+        except Exception as e:
+            print(e)
+            pass
+    pass
+"""
 
 if __name__ == '__main__':
-    main()
+    main(None)
+    """proxy = None
+    bot_th = Thread(target=main, args=(proxy,))
+    #for i in range(8):
+    proxy_th = Thread(target=check_proxy, args=(proxy,))
+    proxy_th.start()
+    #bot_th.start()"""
+
+
+

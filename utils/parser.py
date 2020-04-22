@@ -12,6 +12,7 @@ class ParsePageVK:
         self.max_faces = max_faces
         self.max_faces_before_save = max_faces_before_save
         self.mtcnn = mtcnn
+        self.id = None
 
     def analyze(self, id, x, current_link, aligned, ids, link, sex, curr_sex):
         c = 0
@@ -41,7 +42,7 @@ class ParsePageVK:
         return Image.open(io.BytesIO(p.content)), url
 
     def get_albums(self, vk, owner_id, max_count, aligned, ids, link, sex):
-        def get_albums():
+        def get_albums_():
             for album in vk.photos.getAlbums(owner_id=owner_id, need_system=1)['items']:
                 photos = vk_tools.get_all(values={'owner_id': album['owner_id'],
                                                   'album_id': album['id'], 'photo_sizes': 1},
@@ -70,7 +71,7 @@ class ParsePageVK:
         vk_tools = vk_api.VkTools(vk)
         albums = []
         try:
-            c += get_albums()
+            c += get_albums_()
         except Exception as e:
             print(e)
         return c

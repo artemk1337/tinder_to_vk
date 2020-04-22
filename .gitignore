@@ -1,2 +1,16 @@
 private.*
 vk_config.*
+
+__pycache__/
+cache/
+data/
+
+telegram_bot/__pycache__/
+telegram_bot/history.json
+telegram_bot/info.txt
+telegram_bot/logs.txt
+telegram_bot/private.py
+telegram_bot/vk_config.v2.json
+
+test.py
+

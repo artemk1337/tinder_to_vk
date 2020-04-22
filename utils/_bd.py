@@ -5,6 +5,7 @@ import torch
 import time
 import psycopg2
 import sqlite3
+from tqdm import tqdm
 
 from PIL import Image
 from facenet_pytorch import MTCNN, InceptionResnetV1
@@ -87,19 +88,38 @@ class DataBase:
                 show_(conn)
 
     def find_person(self, arr):
+        def new_dists(dists):
+            n_dists = []
+            i = 0
+            while i < len(dists):
+                n_dists.append(dists[i] + [1 - dists[i][0]])
+                k = i + 1
+                while k < len(dists):
+                    if dists[i][1] == dists[k][1]:
+                        n_dists[i][-1] += 1 - dists[k][0]
+                        del dists[k]
+                    else:
+                        k += 1
+                i += 1
+            # return n_dists
+            return sorted(n_dists, key=lambda x: x[:][-1], reverse=True)[:15]
+
         def find_(conn):
+            dists = []
             with conn.cursor() as cur:
                 print('Finding')
                 cur.execute("""SELECT * FROM users""")
                 start = time.time()
-                for row in cur:
-
+                for row in tqdm(cur):
                     tmp = norm(arr - np.asarray(row[1]))
                     if tmp < 1:
                         dists.append([tmp, row[0], row[2], row[3]])
                 print(time.time() - start, 'sec')
+            # dists = sorted(dists, key=lambda x: x[:][0])[:200]
+            dists = new_dists(dists)
             print(dists)
-        dists = []
+            return dists
+
         if self.DB_type == "Postegre":
             with closing(psycopg2.connect(
                     database=database,
@@ -108,10 +128,11 @@ class DataBase:
                     host=host,
                     port=port
             )) as conn:
-                find_(conn)
+                dists = find_(conn)
         else:
             with closing(sqlite3.connect("database.db")) as conn:
-                find_(conn)
+                dists = find_(conn)
+        return dists
 
     def save_db(self, aligned, ids, link, sex):
         def save(conn):
@@ -129,7 +150,7 @@ class DataBase:
         # For check:
         # dists = [[norm(e1 - e2) for e2 in embeddings] for e1 in embeddings]
         # print(pd.DataFrame(dists, columns=ids, index=ids))
-        print('open')
+        print('Open DataBase')
         if self.DB_type == "Postegre":
             with closing(psycopg2.connect(
                     database=database,
@@ -142,6 +163,7 @@ class DataBase:
         else:
             with closing(sqlite3.connect("database.db")) as conn:
                 save(conn)
+        print('Close DataBase')
 
 
 if __name__ == "__main__":
@@ -149,8 +171,8 @@ if __name__ == "__main__":
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     mtcnn = MTCNN(image_size=160, keep_all=True)
     resnet = InceptionResnetV1(pretrained='vggface2').eval()
-    img = Image.open('../target/test.jpg')
+    img = Image.open('../image.jpg')
     x_aligned, prob = mtcnn(img, save_path=None, return_prob=True)
     embeddings = resnet(x_aligned[:1]).detach().cpu().numpy()
     print(embeddings.shape)
-    DataBase.find_person(embeddings[0])
+    print(DataBase(DB_type, device, resnet).find_person(embeddings[0]))
