@@ -5,14 +5,69 @@ import vk_api
 import re
 
 
+# import requests
+# import vk_api
+# import re
+# import io
+# import psycopg2
+# import sqlite3
+# import time
+# from scipy.linalg import norm
+# import numpy as np
+# from bs4 import BeautifulSoup
+
+
+class FinderVK:
+    def __init__(self, db_type, mtcnn,
+                 resnet, data_base):
+        self.db_type = db_type
+        self.mtcnn = mtcnn
+        self.resnet = resnet
+        self.data_base = data_base
+        self.STATUS_FINDER = "OFF"
+
+    def _check_path_img(self, path, img):
+        if path:
+            return Image.open(path)
+        if img:
+            return img
+        return None
+
+    def find_person(self, path=None, img=None):
+        self.STATUS_FINDER = "ON"
+        _img = self._check_path_img(path, img)
+        if not _img:
+            print("path or img mustn't be empty")
+            return []
+        x_aligned, prob = self.mtcnn(img, save_path=None, return_prob=True)
+        embeddings = self.resnet(x_aligned[:1]).detach().cpu().numpy()
+        res = self.data_base.find_person(embeddings[0])
+        self.STATUS_FINDER = "OFF"
+        return res
+
+
+class ResetDB:
+    def __init__(self, data_base):
+        self.data_base = data_base
+
+    def reset_db_(self):
+        self.data_base.reset_db()
+        self.data_base.create_db()
+        print("Success reset DataBase")
+
+
 class ParsePageVK:
-    def __init__(self, max_last_photos, max_faces, max_faces_before_save, mtcnn):
+    def __init__(self, vk, data_base, mtcnn,
+                 max_last_photos=30, max_faces=20, max_faces_before_save=50):
         # Parameters
         self.max_last_photos = max_last_photos
         self.max_faces = max_faces
         self.max_faces_before_save = max_faces_before_save
         self.mtcnn = mtcnn
-        self.id = None
+        self.vk = vk
+        self.data_base = data_base
+        self.CURRENT_ID = None
+        self.STATUS_PARSER = "OFF"
 
     def analyze(self, id, x, current_link, aligned, ids, link, sex, curr_sex):
         c = 0
@@ -42,7 +97,7 @@ class ParsePageVK:
         return Image.open(io.BytesIO(p.content)), url
 
     def get_albums(self, vk, owner_id, max_count, aligned, ids, link, sex):
-        def get_albums_():
+        def _get_albums():
             for album in vk.photos.getAlbums(owner_id=owner_id, need_system=1)['items']:
                 photos = vk_tools.get_all(values={'owner_id': album['owner_id'],
                                                   'album_id': album['id'], 'photo_sizes': 1},
@@ -71,7 +126,27 @@ class ParsePageVK:
         vk_tools = vk_api.VkTools(vk)
         albums = []
         try:
-            c += get_albums_()
+            c += _get_albums()
         except Exception as e:
             print(e)
+            print('\n\nLOL\n\n')
         return c
+
+    def start_parsing(self, id_):
+        counter = 0
+        aligned, ids, link, sex = [], [], [], []
+        print("Start parse")
+        for i in id_:
+            self.CURRENT_ID = i
+            counter += self.get_albums(self.vk, i, 1000, aligned, ids, link, sex)
+            print("id -", i, "persons -", counter)
+            if counter >= self.max_faces_before_save:
+                self.data_base.save_db(aligned, ids, link, sex)
+                counter = 0
+                aligned, ids, link, sex = [], [], [], []
+        if ids:
+            self.data_base.save_db(aligned, ids, link, sex)
+        self.CURRENT_ID = None
+        print("Finish parse")
+
+

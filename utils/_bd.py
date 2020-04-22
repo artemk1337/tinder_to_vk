@@ -7,12 +7,8 @@ import psycopg2
 import sqlite3
 from tqdm import tqdm
 
-from PIL import Image
-from facenet_pytorch import MTCNN, InceptionResnetV1
-
 
 from private import\
-    Login, Password, Token,\
     database, user, password, host, port
 
 
@@ -87,6 +83,7 @@ class DataBase:
             with closing(sqlite3.connect("database.db")) as conn:
                 show_(conn)
 
+    # need multithreads
     def find_person(self, arr):
         def new_dists(dists):
             n_dists = []
@@ -102,7 +99,7 @@ class DataBase:
                         k += 1
                 i += 1
             # return n_dists
-            return sorted(n_dists, key=lambda x: x[:][-1], reverse=True)[:15]
+            return sorted(n_dists, key=lambda x: x[:][-1], reverse=True)[:10]
 
         def find_(conn):
             dists = []
@@ -117,7 +114,7 @@ class DataBase:
                 print(time.time() - start, 'sec')
             # dists = sorted(dists, key=lambda x: x[:][0])[:200]
             dists = new_dists(dists)
-            print(dists)
+            #print(dists)
             return dists
 
         if self.DB_type == "Postegre":
@@ -164,15 +161,3 @@ class DataBase:
             with closing(sqlite3.connect("database.db")) as conn:
                 save(conn)
         print('Close DataBase')
-
-
-if __name__ == "__main__":
-    DB_type = "Postegre"
-    device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    mtcnn = MTCNN(image_size=160, keep_all=True)
-    resnet = InceptionResnetV1(pretrained='vggface2').eval()
-    img = Image.open('../image.jpg')
-    x_aligned, prob = mtcnn(img, save_path=None, return_prob=True)
-    embeddings = resnet(x_aligned[:1]).detach().cpu().numpy()
-    print(embeddings.shape)
-    print(DataBase(DB_type, device, resnet).find_person(embeddings[0]))
