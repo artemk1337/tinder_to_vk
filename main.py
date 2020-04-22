@@ -50,7 +50,7 @@ if __name__ == '__main__':
     counter = 0
     aligned, ids, link, sex = [], [], [], []
 
-    parser = ParsePageVK(30, 25, 50, mtcnn)
+    parser = ParsePageVK(30, 20, 50, mtcnn)
     print("Start parse")
     for i in id_:
         counter += parser.get_albums(vk, i, 1000, aligned, ids, link, sex)
@@ -69,7 +69,7 @@ def start_parse(id_=None):
     counter = 0
     aligned, ids, link, sex = [], [], [], []
 
-    parser = ParsePageVK(30, 25, 50, mtcnn)
+    parser = ParsePageVK(30, 20, 50, mtcnn)
     print("Start parse")
     for i in id_:
         counter += parser.get_albums(vk, i, 1000, aligned, ids, link, sex)

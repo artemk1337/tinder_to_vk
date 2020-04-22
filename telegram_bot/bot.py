@@ -1,5 +1,6 @@
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters,
                           ConversationHandler, PicklePersistence, run_async)
+from telegram import ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
 import telegram
 import time
 import logging
@@ -9,20 +10,19 @@ from main import start_parse, reset_db_, find_person
 from functions import (start,
     info, help, help_admins,
     error, repeat_input,
-    download_photo,
     login_start, login_finish,
     show_history,
     return_menu, exit_in_menu,
     start_feedback, send_feedback, try_answer_to_feedback,
     reset_db,
-    STATUS_FINDER,
     PHOTO, WAIT,
     markup, logger)
 
 from private import REQUEST_KWARGS, password_bot, admins_id, TOKEN_bot
 
-STATUS_PARSER = 'OFF'
 
+STATUS_PARSER = 'OFF'
+STATUS_FINDER = "OFF"
 
 def add_ids(update, context):
     if update.message.from_user.id in admins_id:
@@ -66,6 +66,48 @@ def show_status(update, context):
     if update.message.from_user.id in admins_id:
         update.message.reply_text(f'Parser is <b>{STATUS_PARSER}</b>',
                                   parse_mode='HTML')
+
+
+
+
+
+
+
+@run_async
+def download_photo(update, context):
+    context.bot.send_chat_action(chat_id=update.message.chat.id,
+                                 action=telegram.ChatAction.TYPING)
+    global STATUS_FINDER
+    # print("LOADING PHOTO")
+    save_path = '../cache/images/'
+    update.message.photo[0].get_file().\
+        download(save_path + f'{update.message.from_user.id}.jpg')
+    if STATUS_FINDER == "ON":
+        update.message.reply_text("Please, wait...")
+        while STATUS_FINDER == "ON":
+            context.bot.send_chat_action(chat_id=update.message.chat.id,
+                                         action=telegram.ChatAction.TYPING)
+            time.sleep(0.5)
+    STATUS_FINDER = "ON"
+    update.message.reply_text("Success!\n*Wait results!*",
+                              reply_markup=markup,
+                              parse_mode=telegram.ParseMode.MARKDOWN)
+    dists = find_person(save_path + f'{update.message.from_user.id}.jpg')
+    STATUS_FINDER = "OFF"
+    if dists:
+        for i in dists:
+            # print(i)
+            context.bot.send_chat_action(chat_id=update.message.chat.id,
+                                         action=telegram.ChatAction.UPLOAD_PHOTO)
+            keyboard_finder = [[InlineKeyboardButton(text="Перейти на страницу",
+                                                     url=f"https://vk.com/id{i[1]}")]]
+            markup_finder = InlineKeyboardMarkup(keyboard_finder)
+            update.message.reply_photo(i[2], caption=None,
+                                       reply_markup=markup_finder)
+    else:
+        update.message.reply_text("Sorry, no results :(")
+
+
 
 
 
