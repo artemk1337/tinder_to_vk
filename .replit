@@ -1,3 +1,0 @@
-language = "bash"
-#pip3 install python-telegram-bot &&
-run = " python3 ./telegram_bot/bot.py"
