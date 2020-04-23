@@ -25,9 +25,11 @@ DB_type = "Postegre"
 class_data_base = DataBase("Postegre", device, resnet)
 class_finder_vk = FinderVK("Postegre", mtcnn, resnet, class_data_base)
 class_reset_db = ResetDB(class_data_base)
-class_parse_vk = ParsePageVK(Auth(login=LOGIN_VK,
-                                  password=PASSWORD_VK,
-                                  auth_handler=False).ImplicitFlow(),
+class_auth_vk = Auth(login=LOGIN_VK,
+                     password=PASSWORD_VK,
+                     auth_handler=False)
+class_parse_vk = ParsePageVK(class_auth_vk.ImplicitFlow(),
+                             class_auth_vk.vk_session,
                              class_data_base, mtcnn, max_last_photos=30,
                              max_faces=20, max_faces_before_save=50)
 class_tg_bot = TelegramBot(class_finder_vk,
@@ -36,6 +38,11 @@ class_tg_bot = TelegramBot(class_finder_vk,
                            TOKEN=TOKEN_TG, REQUEST_KWARGS=REQUEST_KWARGS,
                            admins_id=ADMINS_TG, password_admin=PASSWORD_TG)
 
+"""
 if __name__ == "__main__":
-    print("Try to start bot")
+    print("Trying to start bot")
     class_tg_bot.start_bot()
+"""
+vk = class_auth_vk.ImplicitFlow()
+vk.
+

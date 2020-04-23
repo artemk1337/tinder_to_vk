@@ -3,6 +3,7 @@ from PIL import Image
 import requests
 import vk_api
 import re
+from bs4 import BeautifulSoup
 
 
 # import requests
@@ -33,13 +34,13 @@ class FinderVK:
             return img
         return None
 
-    def find_person(self, path=None, img=None):
+    def finder(self, path=None, img=None):
         self.STATUS_FINDER = "ON"
         _img = self._check_path_img(path, img)
         if not _img:
             print("path or img mustn't be empty")
             return []
-        x_aligned, prob = self.mtcnn(img, save_path=None, return_prob=True)
+        x_aligned, prob = self.mtcnn(_img, save_path=None, return_prob=True)
         embeddings = self.resnet(x_aligned[:1]).detach().cpu().numpy()
         res = self.data_base.find_person(embeddings[0])
         self.STATUS_FINDER = "OFF"
@@ -51,13 +52,16 @@ class ResetDB:
         self.data_base = data_base
 
     def reset_db_(self):
-        self.data_base.reset_db()
+        try:
+            self.data_base.reset_db()
+        except:
+            pass
         self.data_base.create_db()
         print("Success reset DataBase")
 
 
 class ParsePageVK:
-    def __init__(self, vk, data_base, mtcnn,
+    def __init__(self, vk, vk_session, data_base, mtcnn,
                  max_last_photos=30, max_faces=20, max_faces_before_save=50):
         # Parameters
         self.max_last_photos = max_last_photos
@@ -65,6 +69,7 @@ class ParsePageVK:
         self.max_faces_before_save = max_faces_before_save
         self.mtcnn = mtcnn
         self.vk = vk
+        self.vk_session = vk_session
         self.data_base = data_base
         self.CURRENT_ID = None
         self.STATUS_PARSER = "OFF"
@@ -97,6 +102,21 @@ class ParsePageVK:
         return Image.open(io.BytesIO(p.content)), url
 
     def get_albums(self, vk, owner_id, max_count, aligned, ids, link, sex):
+        def get_avatar():
+            soup = BeautifulSoup(self.vk_session.http.get(f'https://vk.com/id{owner_id}').text, 'lxml')
+            s = (soup.find_all('div', id='page_avatar')[0]).find('img').get('src')
+            c_ = 0
+            img, url = self._download(s)
+            try:
+                c_ += self.analyze(owner_id, img, url,
+                                   aligned, ids, link, sex,
+                                   vk.users.get(user_ids=owner_id,
+                                                fields=['sex'])[0]['sex']
+                                   )
+            except Exception as e:
+                print(e, '- BW mod?')
+            return c_
+
         def _get_albums():
             for album in vk.photos.getAlbums(owner_id=owner_id, need_system=1)['items']:
                 photos = vk_tools.get_all(values={'owner_id': album['owner_id'],
@@ -129,7 +149,8 @@ class ParsePageVK:
             c += _get_albums()
         except Exception as e:
             print(e)
-            print('\n\nLOL\n\n')
+            if str(e)[:4] == "[30]":
+                c += get_avatar()
         return c
 
     def start_parsing(self, id_):

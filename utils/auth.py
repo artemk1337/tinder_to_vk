@@ -8,6 +8,7 @@ class Auth(object):
         self.password = password
         self.auth_handler = auth_handler
         self.token = token
+        self.vk_session = None
 
     def ImplicitFlow(self):
         def auth_handler():
@@ -25,6 +26,7 @@ class Auth(object):
             self.login, self.password,
             # функция для обработки двухфакторной аутентификации
             auth_handler=self.auth_handler)
+        self.vk_session = vk_session
         try:
             vk_session.auth()
             return vk_session.get_api()
@@ -35,6 +37,7 @@ class Auth(object):
     def Client_credentials_flow(self):
         try:
             session = vk1.Session(access_token=self.token)  # Авторизация
+            self.vk_session = session  # should test
             return vk1.API(session)
         except Exception as e:
             print(e)

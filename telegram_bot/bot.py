@@ -64,7 +64,7 @@ class TelegramBot:
     def info(self, update, context):
         context.bot.send_chat_action(chat_id=update.message.chat.id,
                                      action=ChatAction.TYPING)
-        with open("info.txt", 'r') as file:
+        with open("telegram_bot/info.txt", 'r') as file:
             reply_text = file.read()
             update.message.reply_text(reply_text,
                                       reply_markup=self.markup,
@@ -110,7 +110,6 @@ class TelegramBot:
         else:
             update.message.reply_text("Wrong password")
             return ConversationHandler.END
-
 
     def show_history(self, update, context):
         if update.message.from_user.id in self.admins_id:
@@ -172,7 +171,7 @@ class TelegramBot:
 
     def try_answer_on_feedback(self, update, context):
         if update.message.from_user.id in self.admins_id:
-            if update.message.reply_to_message.text is not None:
+            if update.message.reply_to_message:
                 try:
                     text_reply = update.message.reply_to_message.text
                     s = text_reply.split('\n')
@@ -236,15 +235,20 @@ class TelegramBot:
 
     def show_status(self, update, context):
         if update.message.from_user.id in self.admins_id:
-            update.message.reply_text(f'Parser is <b>{self.ParsePageVK.STATUS_PARSER}</b>',
-                                      parse_mode='HTML')
+            if self.ParsePageVK.STATUS_PARSER == "ON":
+                update.message.reply_text(f'Parser is <b>{self.ParsePageVK.STATUS_PARSER}</b>\n'
+                                          f'Current id - <b>{self.ParsePageVK.CURRENT_ID}</b>',
+                                          parse_mode='HTML')
+            else:
+                update.message.reply_text(f'Parser is <b>{self.ParsePageVK.STATUS_PARSER}</b>',
+                                          parse_mode='HTML')
 
     @run_async
     def download_photo(self, update, context):
         context.bot.send_chat_action(chat_id=update.message.chat.id,
                                      action=ChatAction.TYPING)
         # print("LOADING PHOTO")
-        save_path = '../cache/images/'
+        save_path = './cache/images/'
         update.message.photo[0].get_file().\
             download(save_path + f'{update.message.from_user.id}.jpg')
         if self.FinderVK.STATUS_FINDER == "ON":
@@ -257,7 +261,9 @@ class TelegramBot:
         update.message.reply_text("Success!\n*Wait results!*",
                                   reply_markup=self.markup,
                                   parse_mode=ParseMode.MARKDOWN)
-        dists = self.FinderVK.find_person(save_path + f'{update.message.from_user.id}.jpg', None)
+        print(self.FinderVK.STATUS_FINDER)
+        dists = self.FinderVK.finder(save_path + f'{update.message.from_user.id}.jpg', None)
+        print(self.FinderVK.STATUS_FINDER)
         self.FinderVK.STATUS_FINDER = "OFF"
         if dists:
             for i in dists:
@@ -274,7 +280,8 @@ class TelegramBot:
 
     def reset_db(self, update, context):
         if update.message.from_user.id in self.admins_id:
-            # self.ResetDB.reset_db_()
+            self.ResetDB.reset_db_()
+            print("SUCCESS RESET DB")
             pass
         else:
             self.repeat_input(update, context)
@@ -322,12 +329,13 @@ class TelegramBot:
         dp.add_handler(MessageHandler(Filters.photo, self.download_photo))
         dp.add_handler(MessageHandler(Filters.text, self.try_answer_on_feedback))
         dp.add_handler(MessageHandler(Filters.all, self.repeat_input))
+        self.logging(None)
         dp.add_error_handler(self.error)
-        self.updater.start_polling(poll_interval=1,
+        self.updater.start_polling(poll_interval=2,
                                    timeout=5,)
         print("Start bot")
         # Run the bot until you press Ctrl-C or the process receives SIGINT,
         # SIGTERM or SIGABRT. This should be used most of the time, since
         # start_polling() is non-blocking and will stop the bot gracefully.
-        # updater.idle()
+        self.updater.idle()
 

@@ -41,6 +41,7 @@ class DataBase:
         def create_(conn):
             with conn.cursor() as cur:
                 """Sex: 2 - man, 1 - woman, 0 - None"""
+                # cur.execute("""CREATE TYPE tensor""")
                 cur.execute("""CREATE TABLE users (
                             id              integer,
                             tensor          float[],
