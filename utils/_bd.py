@@ -6,6 +6,7 @@ import time
 import psycopg2
 import sqlite3
 from tqdm import tqdm
+import threading
 
 
 from private import\
@@ -17,6 +18,7 @@ class DataBase:
         self.DB_type = type_
         self.device = device
         self.resnet = resnet
+        self.data_tmp = []
 
     def reset_db(self):
         def reset_(conn):
@@ -84,6 +86,65 @@ class DataBase:
             with closing(sqlite3.connect("database.db")) as conn:
                 show_(conn)
 
+    def find_person_parallel(self, target):
+        def parse_bd(conn, data):
+            with conn.cursor() as cur:
+                print('Finding')
+                cur.execute("""SELECT * FROM users""")
+                for row in tqdm(cur):
+                    data.append(row)
+
+        def new_dists(dists):
+            n_dists = []
+            i = 0
+            while i < len(dists):
+                n_dists.append(dists[i] + [1 - dists[i][0]])
+                k = i + 1
+                while k < len(dists):
+                    if dists[i][1] == dists[k][1]:
+                        n_dists[i][-1] += 1 - dists[k][0]
+                        del dists[k]
+                    else:
+                        k += 1
+                i += 1
+            # return n_dists
+            return sorted(n_dists, key=lambda x: x[:][-1], reverse=True)[:10]
+
+        def find_(conn):
+            start = time.time()
+            thread = threading.Thread(target=parse_bd,
+                                      args=(conn, self.data_tmp))
+            thread.start()
+            dists = []
+            while not self.data_tmp:
+                pass
+            while self.data_tmp:
+                tmp = norm(target - np.asarray(self.data_tmp[0][1]))
+                if tmp < 1:
+                    dists.append([tmp, self.data_tmp[0][0],
+                                  self.data_tmp[0][2], self.data_tmp[0][3]])
+                del self.data_tmp[0]
+            print(time.time() - start, 'sec')
+            # dists = sorted(dists, key=lambda x: x[:][0])[:200]
+            dists = new_dists(dists)
+            #print(dists)
+            return dists
+
+        if self.DB_type == "Postegre":
+            with closing(psycopg2.connect(
+                    database=database,
+                    user=user,
+                    password=password,
+                    host=host,
+                    port=port
+            )) as conn:
+                dists = find_(conn)
+        else:
+            with closing(sqlite3.connect("database.db")) as conn:
+                dists = find_(conn)
+        return dists
+
+
     # need multithreads
     def find_person(self, arr):
         def new_dists(dists):
@@ -103,16 +164,16 @@ class DataBase:
             return sorted(n_dists, key=lambda x: x[:][-1], reverse=True)[:10]
 
         def find_(conn):
+            start = time.time()
             dists = []
             with conn.cursor() as cur:
                 print('Finding')
                 cur.execute("""SELECT * FROM users""")
-                start = time.time()
                 for row in tqdm(cur):
                     tmp = norm(arr - np.asarray(row[1]))
                     if tmp < 1:
                         dists.append([tmp, row[0], row[2], row[3]])
-                print(time.time() - start, 'sec')
+            print(time.time() - start, 'sec')
             # dists = sorted(dists, key=lambda x: x[:][0])[:200]
             dists = new_dists(dists)
             #print(dists)

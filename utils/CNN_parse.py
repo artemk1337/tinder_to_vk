@@ -165,7 +165,7 @@ class ParsePageVK:
         # 16888179
         with open("ids.txt", 'rb') as f:
             id_ = pickle.load(f)
-        for i in tqdm(id_[id_.index(48331198):]):
+        for i in tqdm(id_[id_.index(169115138):]):
             self.CURRENT_ID = i
             counter += self.get_albums(self.vk, i, 1000, aligned, ids, link, sex)
             print("id -", i, "persons -", counter)

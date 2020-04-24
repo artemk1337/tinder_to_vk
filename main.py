@@ -42,7 +42,7 @@ class_tg_bot = TelegramBot(class_finder_vk,
 if __name__ == "__main__":
     print("Trying to start bot")
     class_tg_bot.start_bot()
-    #class_parse_vk.start_parsing(123)
+    # class_parse_vk.start_parsing(123)
 
 
 """
