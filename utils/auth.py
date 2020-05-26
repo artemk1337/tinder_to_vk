@@ -2,7 +2,7 @@ import vk as vk1
 import vk_api
 
 
-class Auth(object):
+class Auth:
     def __init__(self, login=None, password=None, auth_handler=False, token=None):
         self.login = login
         self.password = password

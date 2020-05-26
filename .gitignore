@@ -13,4 +13,4 @@ telegram_bot/private.py
 telegram_bot/vk_config.v2.json
 
 test.py
-
+private.py

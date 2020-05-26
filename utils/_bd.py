@@ -45,6 +45,7 @@ class DataBase:
                 """Sex: 2 - man, 1 - woman, 0 - None"""
                 # cur.execute("""CREATE TYPE tensor""")
                 cur.execute("""CREATE TABLE users (
+                            key BIGSERIAL PRIMARY KEY,
                             id              integer,
                             tensor          float[],
                             link            text,
@@ -86,6 +87,7 @@ class DataBase:
             with closing(sqlite3.connect("database.db")) as conn:
                 show_(conn)
 
+    # Multithreading
     def find_person_parallel(self, target):
         def parse_bd(conn, data):
             with conn.cursor() as cur:
@@ -144,8 +146,6 @@ class DataBase:
                 dists = find_(conn)
         return dists
 
-
-    # need multithreads
     def find_person(self, arr):
         def new_dists(dists):
             n_dists = []
@@ -164,15 +164,35 @@ class DataBase:
             return sorted(n_dists, key=lambda x: x[:][-1], reverse=True)[:10]
 
         def find_(conn):
+            '''
             start = time.time()
             dists = []
             with conn.cursor() as cur:
                 print('Finding')
+                # cur.execute("""SELECT key, tensor FROM users""")
                 cur.execute("""SELECT * FROM users""")
+                # for key_, tensor_ in tqdm(cur):
                 for row in tqdm(cur):
-                    tmp = norm(arr - np.asarray(row[1]))
+                    # tmp = norm(arr - np.asarray(tensor_))
+                    tmp = norm(arr - np.asarray(tensor_))
                     if tmp < 1:
+                        # cur.execute("""SELECT (id,link,time_added,sex) FROM users WHERE key=key_""")
+                        # for id, link, time_added, sex in cur:
+                        #     dists.append([tmp, id, link, time_added, sex])
                         dists.append([tmp, row[0], row[2], row[3]])
+            '''
+            start = time.time()
+            dists = []
+            with conn.cursor() as cur:
+                print('Finding')
+                cur.execute("""SELECT tensor, id, link FROM users""")
+                cursor = cur
+                for tensor, id, link in tqdm(cursor):
+                    tmp = norm(arr - np.asarray(tensor))
+                    if tmp < 1:
+                        # print(key_)
+                        dists.append([tmp, id, link])
+
             print(time.time() - start, 'sec')
             # dists = sorted(dists, key=lambda x: x[:][0])[:200]
             dists = new_dists(dists)
@@ -198,7 +218,7 @@ class DataBase:
             with conn.cursor() as cur:
                 for i in range(len(ids)):
                     cur.execute("""
-                                INSERT INTO users
+                                INSERT INTO users (id, tensor, link, time_added, sex)
                                 VALUES (%s, %s, %s, %s, %s)""",
                                 (ids[i], embeddings[i], link[i], time.time(), sex[i])
                                 )

@@ -5,6 +5,7 @@ import vk_api
 import re
 from bs4 import BeautifulSoup
 from tqdm import tqdm
+import datetime
 
 
 # import requests
@@ -87,7 +88,7 @@ class ParsePageVK:
                 link.append(current_link)
                 sex.append(curr_sex)
                 c += 1
-        elif 1 < len(prob) < 15:
+        elif 1 < len(prob) < 5:
             for k in range(len(prob)):
                 # Уверенность >= 99%
                 if prob[k] >= 0.99:
@@ -155,17 +156,23 @@ class ParsePageVK:
                     c += get_avatar()
             except:
                 pass
+            if str(e) == "Can't load items. Check access to requested items":
+                print("PROBLEMS WITH CONNECTION. "
+                      "RESTART VK ACCOUNT")
+                quit()
+                exit()
         return c
 
     def start_parsing(self, id_):
         counter = 0
         aligned, ids, link, sex = [], [], [], []
         print("Start parse")
-        import pickle
-        # 16888179
+
+        """import pickle
         with open("ids.txt", 'rb') as f:
-            id_ = pickle.load(f)
-        for i in tqdm(id_[id_.index(169115138):]):
+            id_ = pickle.load(f)"""
+
+        for i in (id_):
             self.CURRENT_ID = i
             counter += self.get_albums(self.vk, i, 1000, aligned, ids, link, sex)
             print("id -", i, "persons -", counter)
@@ -175,7 +182,7 @@ class ParsePageVK:
                 aligned, ids, link, sex = [], [], [], []
         if ids:
             self.data_base.save_db(aligned, ids, link, sex)
+            counter = 0
+            del aligned, ids, link, sex
         self.CURRENT_ID = None
         print("Finish parse")
-
-

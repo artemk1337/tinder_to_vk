@@ -73,7 +73,7 @@ class TelegramBot:
     def help(self, update, context):
         context.bot.send_chat_action(chat_id=update.message.chat.id,
                                      action=ChatAction.TYPING)
-        update.message.reply_text('<b><u>Load a photo to find a person in VK</u></b>\n\n'
+        update.message.reply_text('<b><u>Load a photo to find the person in VK</u></b>\n\n'
                                   'Press <b><u>INFO</u></b> to get more info about the bot.\n'
                                   'Press <b><u>FEEDBACK</u></b> to write a feedback.\n'
                                   '<i><b>/start</b></i> - reload the bot.\n'
@@ -94,7 +94,7 @@ class TelegramBot:
         if update.message.from_user.id in self.admins_id:
             update.message.reply_text("<b><u>All avaliable comands:</u></b>"
                                       "\n<i>/start\n/help\n/show_history\n/add_ids"
-                                      "\n/login\n/show_status\n/end</i>",
+                                      "\n/login\n/show_status\n/exit</i>",
                                       parse_mode="HTML")
 
     def login_start(self, update, context):
@@ -268,13 +268,18 @@ class TelegramBot:
         if dists:
             for i in dists:
                 # print(i)
-                context.bot.send_chat_action(chat_id=update.message.chat.id,
-                                             action=ChatAction.UPLOAD_PHOTO)
-                keyboard_finder = [[InlineKeyboardButton(text="Перейти на страницу",
-                                                         url=f"https://vk.com/id{i[1]}")]]
-                markup_finder = InlineKeyboardMarkup(keyboard_finder)
-                update.message.reply_photo(i[2], caption=None,
-                                           reply_markup=markup_finder)
+                while True:
+                    try:
+                        context.bot.send_chat_action(chat_id=update.message.chat.id,
+                                                     action=ChatAction.UPLOAD_PHOTO)
+                        keyboard_finder = [[InlineKeyboardButton(text="Перейти на страницу",
+                                                                 url=f"https://vk.com/id{i[1]}")]]
+                        markup_finder = InlineKeyboardMarkup(keyboard_finder)
+                        update.message.reply_photo(i[2], caption=None,
+                                                   reply_markup=markup_finder)
+                        break
+                    except:
+                        pass
         else:
             update.message.reply_text("Sorry, no results :(")
 
@@ -331,8 +336,7 @@ class TelegramBot:
         dp.add_handler(MessageHandler(Filters.all, self.repeat_input))
         self.logging(None)
         dp.add_error_handler(self.error)
-        self.updater.start_polling(poll_interval=2,
-                                   timeout=5,)
+        self.updater.start_polling()
         print("Start bot")
         # Run the bot until you press Ctrl-C or the process receives SIGINT,
         # SIGTERM or SIGABRT. This should be used most of the time, since

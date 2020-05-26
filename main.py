@@ -1,7 +1,3 @@
-"""
-private - login, password and other
-"""
-
 import torch
 
 from facenet_pytorch import MTCNN, InceptionResnetV1
@@ -9,6 +5,8 @@ from utils._bd import DataBase
 from utils.CNN_parse import FinderVK, ResetDB, ParsePageVK
 from telegram_bot.bot import TelegramBot
 from utils.auth import Auth
+
+#private - login, password and other
 from private import (LOGIN_VK, PASSWORD_VK,
     TOKEN_TG, REQUEST_KWARGS, ADMINS_TG, PASSWORD_TG)
 
@@ -43,32 +41,3 @@ if __name__ == "__main__":
     print("Trying to start bot")
     class_tg_bot.start_bot()
     # class_parse_vk.start_parsing(123)
-
-
-"""
-def get_members(groupid, VKapi):
-    first = VKapi.groups.getMembers(group_id=groupid, v=5.92) # Первое выполнение метода
-    data = first["items"]  # Присваиваем переменной первую тысячу id
-    count = first["count"] // 1000  # Присваиваем переменной количество тысяч участников
-    # С каждым проходом цикла смещение offset увеличивается на тысячу
-    # и еще тысяча id добавляется к нашему списку.
-    for i in range(1, count + 1):
-        data = data + VKapi.groups.getMembers(group_id=groupid,
-                                              v=5.92,
-                                              offset=i*1000)["items"]
-    return data
-
-
-VKapi = class_auth_vk.ImplicitFlow()
-res = get_members('over_hear_fu', VKapi)
-print(res)
-import pickle
-
-with open("ids.txt", 'wb') as f:
-    pickle.dump(res, f)
-
-with open("ids.txt", 'rb') as f:
-    l = pickle.load(f)
-"""
-
-
