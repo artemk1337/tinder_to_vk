@@ -164,34 +164,38 @@ class DataBase:
             return sorted(n_dists, key=lambda x: x[:][-1], reverse=True)[:10]
 
         def find_(conn):
-            '''
-            start = time.time()
-            dists = []
-            with conn.cursor() as cur:
-                print('Finding')
-                # cur.execute("""SELECT key, tensor FROM users""")
-                cur.execute("""SELECT * FROM users""")
-                # for key_, tensor_ in tqdm(cur):
-                for row in tqdm(cur):
-                    # tmp = norm(arr - np.asarray(tensor_))
-                    tmp = norm(arr - np.asarray(tensor_))
-                    if tmp < 1:
-                        # cur.execute("""SELECT (id,link,time_added,sex) FROM users WHERE key=key_""")
-                        # for id, link, time_added, sex in cur:
-                        #     dists.append([tmp, id, link, time_added, sex])
-                        dists.append([tmp, row[0], row[2], row[3]])
-            '''
+
             start = time.time()
             dists = []
             with conn.cursor() as cur:
                 print('Finding')
                 cur.execute("""SELECT tensor, id, link FROM users""")
-                cursor = cur
-                for tensor, id, link in tqdm(cursor):
+                for tensor, id, link in tqdm(cur):
                     tmp = norm(arr - np.asarray(tensor))
                     if tmp < 1:
                         # print(key_)
                         dists.append([tmp, id, link])
+
+            # Скорость работы одинакова
+            '''
+            start = time.time()
+            dists = []
+            keys_prob = []
+            with conn.cursor() as cur:
+                print('Finding')
+                cur.execute("""SELECT key, tensor FROM users""")
+                for key, tensor in tqdm(cur):
+                    tmp = norm(arr - np.asarray(tensor))
+                    if tmp < 1:
+                        keys_prob.append((key, tmp))
+                i = 0
+                cur.execute(f"""SELECT id, link FROM users
+                                WHERE key IN {tuple([x[0] for x in keys_prob])}""")
+                for id, link in tqdm(cur):
+                    dists.append([keys_prob[i][1], id, link])
+                    i += 1
+            del keys_prob
+            '''
 
             print(time.time() - start, 'sec')
             # dists = sorted(dists, key=lambda x: x[:][0])[:200]
