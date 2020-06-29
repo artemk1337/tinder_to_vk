@@ -6,6 +6,7 @@ import time
 import logging
 import json
 import os
+from datetime import datetime
 
 
 class TelegramBot:
@@ -29,6 +30,7 @@ class TelegramBot:
         self.admins_id = admins_id
         self.password_admin = password_admin
 
+    # logging errors
     def logging(self, filename='logs.txt'):
         if filename:
             logging.basicConfig(filename=filename,
@@ -40,6 +42,7 @@ class TelegramBot:
                                 level=logging.INFO)
         self.logger = logging.getLogger(__name__)
 
+    # hello-message
     def start(self, update, context):
         def create_file():
             if os.path.isfile('history.json') is False:
@@ -58,9 +61,11 @@ class TelegramBot:
         with open('history.json', 'r') as file:
             data = json.load(file)
         with open('history.json', 'w') as file:
-            data[int(update.message.from_user.id)] = time.time()
+            data[str(update.message.from_user.id)] = [{'time': str(datetime.now()),
+                                                       'username': update.message.from_user.username}]
             json.dump(data, file, indent=4, separators=(',', ': '))
 
+    # info-message
     def info(self, update, context):
         context.bot.send_chat_action(chat_id=update.message.chat.id,
                                      action=ChatAction.TYPING)

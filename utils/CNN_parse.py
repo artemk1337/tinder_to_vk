@@ -6,6 +6,7 @@ import re
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 import datetime
+import time
 
 
 # import requests
@@ -77,26 +78,27 @@ class ParsePageVK:
         self.STATUS_PARSER = "OFF"
 
     def analyze(self, id, x, current_link, aligned, ids, link, sex, curr_sex):
+        def sucess(c):
+            aligned.append(x_aligned[0])
+            ids.append(id)
+            link.append(current_link)
+            sex.append(curr_sex)
+            c += 1
+            return c
+
         c = 0
-        # save_path=f'data/ids/{id_user}/face_{i}.png'
+        # save_path=f'data/ids/face{str(time.time()).split(".")[-1]}/{id}.jpg'
         x_aligned, prob = self.mtcnn(x, save_path=None, return_prob=True)
         if len(prob) == 1 and prob[0] is not None:
             # Уверенность >= 99%
             if prob[0] >= 0.99:
-                aligned.append(x_aligned[0])
-                ids.append(id)
-                link.append(current_link)
-                sex.append(curr_sex)
-                c += 1
+                c = sucess(c)
         elif 1 < len(prob) < 5:
             for k in range(len(prob)):
                 # Уверенность >= 99%
                 if prob[k] >= 0.99:
-                    aligned.append(x_aligned[k])
-                    ids.append(id)
-                    link.append(current_link)
-                    sex.append(curr_sex)
-                    c += 1
+                    c = sucess(c)
+        print(c)
         return c
 
     def _download(self, url):

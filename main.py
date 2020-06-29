@@ -33,7 +33,7 @@ class_parse_vk = ParsePageVK(class_auth_vk.ImplicitFlow(),
 class_tg_bot = TelegramBot(class_finder_vk,
                            class_reset_db,
                            class_parse_vk,
-                           TOKEN=TOKEN_TG, REQUEST_KWARGS=REQUEST_KWARGS,
+                           TOKEN=TOKEN_TG, REQUEST_KWARGS=None,
                            admins_id=ADMINS_TG, password_admin=PASSWORD_TG)
 
 
