@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from tqdm import tqdm
 import datetime
 import time
+import numpy as np
 
 
 # import requests
@@ -167,27 +168,27 @@ class ParsePageVK:
                 exit()
         return c
 
-    def start_parsing(self, id_):
-        counter = 0
-        aligned, ids, link, sex = [], [], [], []
+    def start_parsing(self, ids, path=None):
+        collected_faces = 0
+        aligned, current_ids, link, sex = [], [], [], []
         print("Start parse")
 
-        """import pickle
-        with open("ids.txt", 'rb') as f:
-            id_ = pickle.load(f)"""
+        if path is not None:
+            ids = np.load('data/ids_from_group_' + path + '.npy')
 
-        for i in (id_):
+
+        for i in (ids):
             self.CURRENT_ID = i
-            counter += self.get_albums(self.vk, i, 1000, aligned, ids, link, sex)
-            print("id -", i, "persons -", counter)
-            if counter >= self.min_faces_before_save:
-                self.data_base.save_db(aligned, ids, link, sex)
-                counter = 0
-                aligned, ids, link, sex = [], [], [], []
-        if ids:
-            self.data_base.save_db(aligned, ids, link, sex)
-            counter = 0
-            del aligned, ids, link, sex
+            collected_faces += self.get_albums(self.vk, i, 1000, aligned, current_ids, link, sex)
+            print("id -", i, "persons -", collected_faces)
+            if collected_faces >= self.min_faces_before_save:
+                self.data_base.save_db(aligned, current_ids, link, sex)
+                collected_faces = 0
+                aligned, current_ids, link, sex = [], [], [], []
+        if current_ids:
+            self.data_base.save_db(aligned, current_ids, link, sex)
+            collected_faces = 0
+            del aligned, current_ids, link, sex
         self.CURRENT_ID = None
         print("Finish parse")
 
@@ -196,7 +197,6 @@ class ParsePageVK:
         i = 0
         count = 1000
         import sys
-        import numpy as np
         max_i = sys.maxsize
         while i < max_i:
             users = self.vk.groups.getMembers(group_id=url, offset=i, count=count, fields=fields)

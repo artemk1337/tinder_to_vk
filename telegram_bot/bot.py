@@ -99,7 +99,8 @@ class TelegramBot:
         if update.message.from_user.id in self.admins_id:
             update.message.reply_text("<b><u>All avaliable comands:</u></b>"
                                       "\n<i>/start\n/help\n/show_history\n/add_ids"
-                                      "\n/login\n/show_status\n/parse_group_vk\n/exit</i>",
+                                      "\n/add_ids_group\n/login\n/show_status"
+                                      "\n/parse_group_vk\n/exit</i>",
                                       parse_mode="HTML")
 
     def login_start(self, update, context):
@@ -231,7 +232,7 @@ class TelegramBot:
         update.message.reply_text("*Parsing started*",
                                   parse_mode=ParseMode.MARKDOWN
                                   )
-        self.ParsePageVK.start_parsing(id_=eval(message))
+        self.ParsePageVK.start_parsing(ids=eval(message))
         update.message.reply_text("*Parsing finished*",
                                   parse_mode=ParseMode.MARKDOWN
                                   )
@@ -261,7 +262,7 @@ class TelegramBot:
             while self.FinderVK.STATUS_FINDER == "ON":
                 context.bot.send_chat_action(chat_id=update.message.chat.id,
                                              action=ChatAction.TYPING)
-                time.sleep(0.5)
+                time.sleep(0.25)
         self.FinderVK.STATUS_FINDER = "ON"
         update.message.reply_text("Success!\n*Wait results!*",
                                   reply_markup=self.markup,
@@ -320,6 +321,36 @@ class TelegramBot:
                                   parse_mode='HTML')
         return ConversationHandler.END
 
+    def add_ids_group(self, update, context):
+        if update.message.from_user.id in self.admins_id:
+            update.message.reply_text("<u>Send me url</u>",
+                                      parse_mode='HTML')
+            return self.WAIT
+        else:
+            self.repeat_input(update, context)
+            return ConversationHandler.END
+
+    @run_async
+    def start_add_ids_group(self, update, context):
+        message = update.message.text
+        if self.ParsePageVK.STATUS_PARSER == "ON":
+            d = update.message.reply_text("Parser is busy.\nWait...")
+            while self.ParsePageVK.STATUS_PARSER == "ON":
+                context.bot.send_chat_action(chat_id=update.message.chat.id,
+                                             action=ChatAction.TYPING,
+                                             timeout=5)
+                time.sleep(5)
+        self.ParsePageVK.STATUS_PARSER = "ON"
+        update.message.reply_text("*Parsing started*",
+                                  parse_mode=ParseMode.MARKDOWN
+                                  )
+        self.ParsePageVK.start_parsing(ids=None, path=message.split('/')[-1])
+        update.message.reply_text("*Parsing finished*",
+                                  parse_mode=ParseMode.MARKDOWN
+                                  )
+        self.ParsePageVK.STATUS_PARSER = "OFF"
+        return ConversationHandler.END
+
     def start_bot(self):
         # pp = PicklePersistence(filename='conversationbot')
         pp = False
@@ -356,8 +387,16 @@ class TelegramBot:
             fallbacks=[CommandHandler('exit', self.return_menu)],
             allow_reentry=False, persistent=False,
             name="parse_group_VK_conversation")
+        conv_handler_add_ids_group = ConversationHandler(
+            entry_points=[CommandHandler('add_ids_group', self.add_ids_group)],
+            states={self.WAIT: [CommandHandler('exit', self.return_menu),
+                                MessageHandler(Filters.text, self.start_add_ids_group)]},
+            fallbacks=[CommandHandler('exit', self.return_menu)],
+            allow_reentry=False, persistent=False,
+            name="add_ids_group_conversation")
         dp.add_handler(conv_handler_login)  # /login
         dp.add_handler(conv_handler_add_ids)  # /add_ids
+        dp.add_handler(conv_handler_add_ids_group)  # /add_ids_group
         dp.add_handler(conv_handler_feedback)  # Feedback
         dp.add_handler(conv_handler_parse_group_VK)  # Parser page VK /parse_group_vk
         dp.add_handler(CommandHandler('start', self.start))  # /start
