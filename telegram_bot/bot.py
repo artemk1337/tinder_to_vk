@@ -99,7 +99,7 @@ class TelegramBot:
         if update.message.from_user.id in self.admins_id:
             update.message.reply_text("<b><u>All avaliable comands:</u></b>"
                                       "\n<i>/start\n/help\n/show_history\n/add_ids"
-                                      "\n/login\n/show_status\n/exit</i>",
+                                      "\n/login\n/show_status\n/parse_group_vk\n/exit</i>",
                                       parse_mode="HTML")
 
     def login_start(self, update, context):
@@ -296,6 +296,30 @@ class TelegramBot:
         else:
             self.repeat_input(update, context)
 
+    def parse_group_vk(self, update, context):
+        if update.message.from_user.id in self.admins_id:
+            context.bot.send_chat_action(chat_id=update.message.chat.id,
+                                         action=ChatAction.TYPING)
+            update.message.reply_text("<u>Send me url on group</u>\n\n"
+                                      "<b>/exit - return to main menu</b>",
+                                      parse_mode='HTML', reply_markup=None)
+            return self.WAIT
+        else:
+            self.repeat_input(update, context)
+            return ConversationHandler.END
+
+    def start_parser_group(self, update, context):
+        url_ = update.message.text.split('/')[-1]
+        try:
+            self.ParsePageVK.\
+                parse_ids_from_group(url_)
+        except Exception as e:
+            update.message.reply_text(e)
+        update.message.reply_text("<b><i>Successfully collected</i></b>",
+                                  reply_markup=self.markup,
+                                  parse_mode='HTML')
+        return ConversationHandler.END
+
     def start_bot(self):
         # pp = PicklePersistence(filename='conversationbot')
         pp = False
@@ -324,10 +348,18 @@ class TelegramBot:
                                 MessageHandler(Filters.text, self.send_feedback)]},
             fallbacks=[CommandHandler('exit', self.return_menu)],
             allow_reentry=False, persistent=False,
-            name="add_ids_conversation")
+            name="feedback_conversation")
+        conv_handler_parse_group_VK = ConversationHandler(
+            entry_points=[CommandHandler('parse_group_vk', self.parse_group_vk)],
+            states={self.WAIT: [CommandHandler('exit', self.return_menu),
+                                MessageHandler(Filters.text, self.start_parser_group)]},
+            fallbacks=[CommandHandler('exit', self.return_menu)],
+            allow_reentry=False, persistent=False,
+            name="parse_group_VK_conversation")
         dp.add_handler(conv_handler_login)  # /login
         dp.add_handler(conv_handler_add_ids)  # /add_ids
         dp.add_handler(conv_handler_feedback)  # Feedback
+        dp.add_handler(conv_handler_parse_group_VK)  # Parser page VK /parse_group_vk
         dp.add_handler(CommandHandler('start', self.start))  # /start
         dp.add_handler(CommandHandler('exit', self.exit_in_menu))  # /exit in main menu
         dp.add_handler(CommandHandler('reset_db', self.reset_db))  # /reset_db

@@ -65,11 +65,13 @@ class ResetDB:
 
 class ParsePageVK:
     def __init__(self, vk, vk_session, data_base, mtcnn,
-                 max_last_photos=30, max_faces=20, min_faces_before_save=50):
+                 max_last_photos=50, max_faces=50, min_faces_before_save=50,
+                 last_seen_range=2629743):
         # Parameters
         self.max_last_photos = max_last_photos
         self.max_faces = max_faces
         self.min_faces_before_save = min_faces_before_save
+        self.last_seen_range = last_seen_range
         self.mtcnn = mtcnn
         self.vk = vk
         self.vk_session = vk_session
@@ -188,3 +190,23 @@ class ParsePageVK:
             del aligned, ids, link, sex
         self.CURRENT_ID = None
         print("Finish parse")
+
+    def parse_ids_from_group(self, url, fields=['last_seen']):
+        list_ids = []
+        i = 0
+        count = 1000
+        import sys
+        import numpy as np
+        max_i = sys.maxsize
+        while i < max_i:
+            users = self.vk.groups.getMembers(group_id=url, offset=i, count=count, fields=fields)
+            max_i = users['count']
+
+            list_ids += [k['id'] if k.get('last_seen', None) and
+                         time.time() - int(k['last_seen']['time']) < self.last_seen_range
+                         else k['id'] if not k.get('last_seen', None) else None
+                         for k in users['items']
+                         ]
+            i += count
+        np.save(f'data/ids_from_group_{url}', np.asarray([i for i in list_ids if i]))
+
