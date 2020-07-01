@@ -28,9 +28,9 @@ class_auth_vk = Auth(login=LOGIN_VK,
                      auth_handler=True)
 class_parse_vk = ParsePageVK(class_auth_vk.ImplicitFlow(),
                              class_auth_vk.vk_session,
-                             class_data_base, mtcnn, max_last_photos=30,
-                             max_faces=10, min_faces_before_save=15,
-                             last_seen_range=2629743)
+                             class_data_base, mtcnn, resnet, device,
+                             max_last_photos=30, max_faces=30, min_faces_before_save=15,
+                             max_faces_one_photo=3, last_seen_range=2629743)
 class_tg_bot = TelegramBot(class_finder_vk,
                            class_reset_db,
                            class_parse_vk,

@@ -7,6 +7,7 @@ import logging
 import json
 import os
 from datetime import datetime
+import numpy as np
 
 
 class TelegramBot:
@@ -267,24 +268,23 @@ class TelegramBot:
         update.message.reply_text("Success!\n*Wait results!*",
                                   reply_markup=self.markup,
                                   parse_mode=ParseMode.MARKDOWN)
-        print(self.FinderVK.STATUS_FINDER)
+        #print(self.FinderVK.STATUS_FINDER)
         dists = self.FinderVK.finder(save_path + f'{update.message.from_user.id}.jpg', None)
-        print(self.FinderVK.STATUS_FINDER)
-        self.FinderVK.STATUS_FINDER = "OFF"
+        #print(self.FinderVK.STATUS_FINDER)
         if dists:
             for i in dists:
-                # print(i)
+                #print(i)
                 while True:
                     try:
                         context.bot.send_chat_action(chat_id=update.message.chat.id,
                                                      action=ChatAction.UPLOAD_PHOTO)
-                        keyboard_finder = [[InlineKeyboardButton(text="Перейти на страницу",
-                                                                 url=f"https://vk.com/id{i[1]}")]]
+                        keyboard_finder = [[InlineKeyboardButton(text=f"Go to page (confidence {round((1-i[1])*100)}%)",
+                                                                 url=f"https://vk.com/id{i[2]}")]]
                         markup_finder = InlineKeyboardMarkup(keyboard_finder)
-                        update.message.reply_photo(i[2], caption=None,
-                                                   reply_markup=markup_finder)
+                        update.message.reply_photo(i[0], caption=None, reply_markup=markup_finder)
                         break
-                    except:
+                    except Exception as e:
+                        print(e)
                         pass
         else:
             update.message.reply_text("Sorry, no results :(")

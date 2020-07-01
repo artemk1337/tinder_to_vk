@@ -49,8 +49,8 @@ class DataBase:
                             id              integer,
                             tensor          float[],
                             link            text,
-                            time_added      integer,
-                            sex             integer
+                            sex             integer,
+                            time_added      integer
                             )""")
                 conn.commit()
 
@@ -87,7 +87,7 @@ class DataBase:
             with closing(sqlite3.connect("database.db")) as conn:
                 show_(conn)
 
-    # Multithreading
+    # Multithreading ; OLD VERSION need update
     def find_person_parallel(self, target):
         def parse_bd(conn, data):
             with conn.cursor() as cur:
@@ -148,23 +148,19 @@ class DataBase:
 
     def find_person(self, arr):
         def new_dists(dists):
-            n_dists = []
-            i = 0
-            while i < len(dists):
-                n_dists.append(dists[i] + [1 - dists[i][0]])
-                k = i + 1
-                while k < len(dists):
-                    if dists[i][1] == dists[k][1]:
-                        n_dists[i][-1] += 1 - dists[k][0]
-                        del dists[k]
-                    else:
-                        k += 1
-                i += 1
-            # return n_dists
-            return sorted(n_dists, key=lambda x: x[:][-1], reverse=True)[:10]
+            """i = 0
+            dists = sorted(dists, key=lambda x: x[:][2], reverse=False)
+            while i < len(dists) - 1:
+                if dists[i][2] == dists[i + 1][2]:
+                    if dists[i + 1][1] < dists[i][1]:
+                        dists[i][0] = dists[i + 1][0]
+                    dists[i][1] = 1 - (1 - dists[i][1]) + (1 - dists[i + 1][1])
+                    dists.remove(dists[i + 1])
+                else:
+                    i += 1"""
+            return sorted(dists, key=lambda x: x[:][1], reverse=False)[:10]
 
         def find_(conn):
-
             start = time.time()
             dists = []
             with conn.cursor() as cur:
@@ -174,33 +170,12 @@ class DataBase:
                     tmp = norm(arr - np.asarray(tensor))
                     if tmp < 1:
                         # print(key_)
-                        dists.append([tmp, id, link])
-
-            # Скорость работы одинакова
-            '''
-            start = time.time()
-            dists = []
-            keys_prob = []
-            with conn.cursor() as cur:
-                print('Finding')
-                cur.execute("""SELECT key, tensor FROM users""")
-                for key, tensor in tqdm(cur):
-                    tmp = norm(arr - np.asarray(tensor))
-                    if tmp < 1:
-                        keys_prob.append((key, tmp))
-                i = 0
-                cur.execute(f"""SELECT id, link FROM users
-                                WHERE key IN {tuple([x[0] for x in keys_prob])}""")
-                for id, link in tqdm(cur):
-                    dists.append([keys_prob[i][1], id, link])
-                    i += 1
-            del keys_prob
-            '''
+                        dists.append([link, tmp, id])
 
             print(time.time() - start, 'sec')
             # dists = sorted(dists, key=lambda x: x[:][0])[:200]
             dists = new_dists(dists)
-            #print(dists)
+            # print(dists)
             return dists
 
         if self.DB_type == "Postegre":
@@ -217,19 +192,19 @@ class DataBase:
                 dists = find_(conn)
         return dists
 
-    def save_db(self, aligned, ids, link, sex):
+    def save_db(self, embeddings, ids, sex, links):
         def save(conn):
             with conn.cursor() as cur:
                 for i in range(len(ids)):
                     cur.execute("""
-                                INSERT INTO users (id, tensor, link, time_added, sex)
+                                INSERT INTO users (id, tensor, link, sex, time_added)
                                 VALUES (%s, %s, %s, %s, %s)""",
-                                (ids[i], embeddings[i], link[i], time.time(), sex[i])
+                                (int(ids[i]), list(embeddings[i]), str(links[i]), int(sex[i]), int(time.time()))
                                 )
                 conn.commit()
 
-        aligned = torch.stack(aligned).to(self.device)
-        embeddings = self.resnet(aligned).detach().cpu().tolist()  # numpy()
+        # aligned = torch.stack(aligned).to(self.device)
+        # embeddings = self.resnet(aligned).detach().cpu().tolist()  # numpy()
         # For check:
         # dists = [[norm(e1 - e2) for e2 in embeddings] for e1 in embeddings]
         # print(pd.DataFrame(dists, columns=ids, index=ids))
