@@ -194,13 +194,21 @@ class ParsePageVK:
         return vectors, url_photos
 
     def get_face(self, owner_id, max_count, aligned, ids, sex, links):
-        def _get_id_sex_person_(ids, sex):
+        def _get_id_sex_person_(ids, sex, only_id=False):
             ids += [owner_id]
-            sex += [self.vk.users.get(user_ids=owner_id, fields=['sex'])[0]['sex']]
+            if not only_id:
+                sex += [self.vk.users.get(user_ids=owner_id, fields=['sex'])[0]['sex']]
+            else:
+                sex += [sex[-1]]
 
         def _download_photo_(url):
             p = requests.get(url)
             return Image.open(io.BytesIO(p.content)), url
+
+        def _append_all_params_(embeddings, url_photos, key, only_id=False):
+            links.append(url_photos[key])
+            aligned.append(embeddings[key].tolist())
+            _get_id_sex_person_(ids, sex, only_id)
 
         def _find_best_vector_(embeddings, url_photos):
             #print(embeddings.shape)
@@ -212,19 +220,13 @@ class ParsePageVK:
             tmp_ = sorted(tmp, key=lambda x: x, reverse=False)
             # df.to_csv('data/table.csv')
             key = tmp.index(tmp_[0])
-            links.append(url_photos[key])
-            aligned.append(embeddings[key].tolist())
-            _get_id_sex_person_(ids, sex)
+            _append_all_params_(embeddings, url_photos, key, only_id=False)
             if len(tmp) > 1:
-                key = tmp.index(tmp_[0])
-                links.append(url_photos[key])
-                aligned.append(embeddings[key].tolist())
-                _get_id_sex_person_(ids, sex)
+                key = tmp.index(tmp_[1])
+                _append_all_params_(embeddings, url_photos, key, only_id=True)
             if len(tmp) > 2:
-                key = tmp.index(tmp_[0])
-                links.append(url_photos[key])
-                aligned.append(embeddings[key].tolist())
-                _get_id_sex_person_(ids, sex)
+                key = tmp.index(tmp_[2])
+                _append_all_params_(embeddings, url_photos, key, only_id=True)
             del tmp, tmp_
             assert len(links) == len(aligned) == len(ids) == len(sex), "ASSERT ERROR 1"
 
